@@ -166,16 +166,24 @@ public struct Lexer {
         var value = ""
         while let character = peek() {
             if character == "\\" {
+                let escapeStart = position
                 advance()
                 if let escaped = advance() {
                     switch escaped {
-                    case "n": value.append("\n")
-                    case "t": value.append("\t")
-                    case "r": value.append("\r")
                     case "\"": value.append("\"")
                     case "\\": value.append("\\")
-                    default: value.append(escaped)
+                    default:
+                        diagnostics.append(Diagnostic(
+                            severity: .error,
+                            message: "Invalid string escape '\\\(escaped)' — the client only accepts \\\\ and \\\"",
+                            range: SourceRange(start: escapeStart, end: position)))
+                        value.append(escaped)
                     }
+                } else {
+                    diagnostics.append(Diagnostic(
+                        severity: .error,
+                        message: "Dangling '\\' at end of string literal",
+                        range: SourceRange(start: escapeStart, end: position)))
                 }
                 continue
             }
@@ -221,6 +229,10 @@ public struct Lexer {
             let range = SourceRange(start: start, end: position)
             diagnostics.append(Diagnostic(severity: .error, message: "Expected identifier or color after '#'", range: range))
             return Token(kind: .hash, text: "", range: range)
+        }
+        if run.contains("_") {
+            let range = SourceRange(start: start, end: position)
+            diagnostics.append(Diagnostic(severity: .error, message: "'#\(run)' — identifier names cannot contain '_' (the client rejects underscores in #Id names)", range: range))
         }
         return Token(kind: .hash, text: run, range: SourceRange(start: start, end: position))
     }

@@ -192,6 +192,70 @@ if arguments[1] == "--catalog", arguments.count >= 4 {
     exit(0)
 }
 
+if arguments[1] == "--dump-catalog-json", arguments.count >= 3 {
+    let outputPath = arguments[2]
+
+    func kindTag(_ kind: PropertyKind) -> String {
+        switch kind {
+        case .color: return "color"
+        case .number: return "number"
+        case .string: return "string"
+        case .boolean: return "boolean"
+        case .enumeration(let name): return "enumeration:\(name)"
+        case .anchor: return "anchor"
+        case .padding: return "padding"
+        case .style(let name): return "style:\(name)"
+        case .reference: return "reference"
+        case .binding: return "binding"
+        case .texturePath: return "texturePath"
+        case .record: return "record"
+        case .list: return "list"
+        case .unknown: return "unknown"
+        }
+    }
+
+    let widgetNames = SemanticCatalog.allWidgetNames()
+    var widgetDefs: [String: Any] = [:]
+    for name in widgetNames {
+        let def = SemanticCatalog.definition(for: name)
+        widgetDefs[name] = [
+            "category": def.category,
+            "isContainer": def.isContainer,
+            "summary": def.summary,
+            "defaultSize": ["w": def.defaultSize.width, "h": def.defaultSize.height]
+        ]
+    }
+
+    var enumNames = Set(SemanticCatalog.enumValues.keys)
+    enumNames.formUnion(CorpusCatalog.enumValues.keys)
+    var enumValuesOut: [String: [String]] = [:]
+    for name in enumNames { enumValuesOut[name] = SemanticCatalog.enumOptions(name) }
+
+    var propertyNames = Set(SemanticCatalog.propertyKinds.keys)
+    propertyNames.formUnion(CorpusCatalog.propertyKind.keys)
+    propertyNames.formUnion(CorpusCatalog.enumValues.keys)
+    for props in CorpusCatalog.widgetProperties.values { propertyNames.formUnion(props) }
+    for fields in CorpusCatalog.recordFields.values { propertyNames.formUnion(fields) }
+    var propertyKindsOut: [String: String] = [:]
+    for name in propertyNames { propertyKindsOut[name] = kindTag(SemanticCatalog.kind(for: name)) }
+
+    let payload: [String: Any] = [
+        "widgets": widgetNames,
+        "widgetDefs": widgetDefs,
+        "enumValues": enumValuesOut,
+        "propertyKinds": propertyKindsOut,
+        "widgetProperties": CorpusCatalog.widgetProperties,
+        "recordFields": CorpusCatalog.recordFields,
+        "constructors": CorpusCatalog.constructors,
+        "propertyConstructors": CorpusCatalog.propertyConstructors,
+        "minedPropertyKind": CorpusCatalog.propertyKind
+    ]
+    let data = try! JSONSerialization.data(withJSONObject: payload, options: [.prettyPrinted, .sortedKeys])
+    try! data.write(to: URL(fileURLWithPath: outputPath))
+    print("catalog json: \(widgetNames.count) widgets, \(enumValuesOut.count) enums, \(propertyKindsOut.count) property kinds -> \(outputPath)")
+    exit(0)
+}
+
 if arguments[1] == "--render", arguments.count >= 4 {
     let file = arguments[2]
     let outputPath = arguments[3]
