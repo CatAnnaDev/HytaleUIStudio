@@ -9,10 +9,68 @@ func detectGameData() -> URL? {
     return FileManager.default.fileExists(atPath: url.path) ? url : nil
 }
 
+func printHelp() {
+    let gameData = detectGameData()?.path ?? "(not detected)"
+    print("""
+    uivalidate — Hytale .ui parser / renderer / catalog tool (HytaleUIStudio)
+
+    USAGE:
+      uivalidate <dir|listfile> [maxErrors]
+          Parse-check and round-trip every .ui file under a directory (searched
+          recursively) or listed in a text file (one path per line).
+
+      uivalidate --layout <file.ui>
+          Resolve the document and print the laid-out element tree with frames
+          [x y w h] in a 1920x1080 viewport.
+
+      uivalidate --render <file.ui> <out.png> [scale]
+          Resolve, lay out and render the .ui to a PNG. scale defaults to 0.6.
+          Loads 9-slice textures from the installed game data when available.
+
+      uivalidate --diff <file.ui>
+          Parse -> serialize -> reparse and report whether the ASTs are EQUAL.
+          Writes /tmp/ast_a.txt, /tmp/ast_b.txt and /tmp/serialized.ui.
+
+      uivalidate --catalog <dir|listfile> <out.swift>
+          Mine widgets / properties / enums / record fields from the corpus and
+          emit a CorpusCatalog as Swift source.
+
+      uivalidate --dump-catalog-json <out.json>
+          Dump SemanticCatalog + CorpusCatalog (widgets, defaults, enums, property
+          kinds, record fields, constructors) as JSON.
+
+      uivalidate --help | -h
+          Show this help.
+
+    ARGUMENTS:
+      <dir|listfile>   Directory searched recursively for *.ui, or a text file with
+                       one .ui path per line.
+      [maxErrors]      Max failing files to print in detail (default 20).
+      [scale]          Render scale relative to the design size (default 0.6).
+
+    EXIT STATUS:
+      The default command exits 0 only when every file parses and round-trips
+      cleanly; otherwise it exits non-zero after printing a summary.
+
+    GAME DATA (for --render textures):
+      \(gameData)
+
+    EXAMPLES:
+      uivalidate ~/Library/Application\\ Support/Hytale/.../Interface
+      uivalidate --layout Game/Interface/FeedbackDialog.ui
+      uivalidate --render FeedbackDialog.ui /tmp/out.png 0.6
+      uivalidate --dump-catalog-json /tmp/catalog.json
+    """)
+}
+
 let arguments = CommandLine.arguments
-guard arguments.count >= 2 else {
-    print("usage: uivalidate <directory-or-listfile> [maxErrors]")
+if arguments.count < 2 {
+    printHelp()
     exit(2)
+}
+if arguments[1] == "--help" || arguments[1] == "-h" || arguments[1] == "help" {
+    printHelp()
+    exit(0)
 }
 
 if arguments[1] == "--diff", arguments.count >= 3 {
@@ -314,6 +372,12 @@ if arguments[1] == "--layout", arguments.count >= 3 {
     }
     print("unresolved refs: \(Set(resolver.unresolved).sorted().prefix(20).joined(separator: ", "))")
     exit(0)
+}
+
+if arguments[1].hasPrefix("-") {
+    FileHandle.standardError.write(Data("error: unknown or malformed command '\(arguments[1])'\n\n".utf8))
+    printHelp()
+    exit(2)
 }
 
 let target = arguments[1]

@@ -7,3 +7,4 @@ DerivedData/
 *.app/
 HytaleUIStudio.app/
 *.app.zip
+/editors
