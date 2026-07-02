@@ -1,0 +1,33 @@
+#!/bin/bash
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+CONFIG="${1:-release}"
+swift build -c "$CONFIG" --product HytaleUIStudio
+BIN="$(swift build -c "$CONFIG" --product HytaleUIStudio --show-bin-path)/HytaleUIStudio"
+
+APP="$PWD/HytaleUIStudio.app"
+rm -rf "$APP"
+mkdir -p "$APP/Contents/MacOS"
+cp "$BIN" "$APP/Contents/MacOS/HytaleUIStudio"
+
+cat > "$APP/Contents/Info.plist" <<'PLIST'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleName</key><string>Hytale UI Studio</string>
+    <key>CFBundleDisplayName</key><string>Hytale UI Studio</string>
+    <key>CFBundleIdentifier</key><string>dev.catanna.hytaleuistudio</string>
+    <key>CFBundleExecutable</key><string>HytaleUIStudio</string>
+    <key>CFBundlePackageType</key><string>APPL</string>
+    <key>CFBundleVersion</key><string>1</string>
+    <key>CFBundleShortVersionString</key><string>1.0</string>
+    <key>LSMinimumSystemVersion</key><string>14.0</string>
+    <key>NSHighResolutionCapable</key><true/>
+    <key>NSPrincipalClass</key><string>NSApplication</string>
+</dict>
+</plist>
+PLIST
+
+echo "Built $APP"

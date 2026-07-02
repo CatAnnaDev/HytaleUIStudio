@@ -1,0 +1,8 @@
+.build/
+.swiftpm/
+DerivedData/
+.DS_Store
+*.md
+*.app/
+HytaleUIStudio.app/
+*.app.zip
