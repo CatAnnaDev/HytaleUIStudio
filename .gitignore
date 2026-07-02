@@ -3,6 +3,7 @@
 DerivedData/
 .DS_Store
 *.md
+!README.md
 *.app/
 HytaleUIStudio.app/
 *.app.zip
